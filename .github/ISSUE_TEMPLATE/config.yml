@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Harbour core issues
+    url: https://github.com/harbour/core/issues
+    about: Problems in Harbour itself (not in get-tw's tget.prg, WIN_TW or WVT_TW) belong to the Harbour project.

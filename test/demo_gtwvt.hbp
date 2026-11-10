@@ -1,0 +1,13 @@
+# demo_gtwvt: demo_gtwvt.prg linked with the WVT_TW terminal + tget + hbct
+# Paths are relative to this file (test\). Build from test\:  hbmk2 demo_gtwvt.hbp
+# Intermediate files are kept per compiler: work\bcc\, work\msvc\, work\msvc64\
+-winuni
+-gui
+-workdir=work\${hb_comp}\demo_gtwvt
+-odemo_gtwvt
+# Sources are UTF-8: pass -utf-8 to MSVC only (32- and 64-bit), not to BCC
+-cflag=-utf-8{msvc|msvc64}
+hbct.hbc
+demo_gtwvt.prg
+..\src\tget.prg
+..\src\gtwvt_tw.c

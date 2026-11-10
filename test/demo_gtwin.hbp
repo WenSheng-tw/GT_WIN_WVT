@@ -1,0 +1,12 @@
+# demo_gtwin: demo_gtwin.prg linked with the WIN_TW terminal + tget + hbct
+# Paths are relative to this file (test\). Build from test\:  hbmk2 demo_gtwin.hbp
+# Intermediate files are kept per compiler: work\bcc\, work\msvc\, work\msvc64\
+-winuni
+-workdir=work\${hb_comp}\demo_gtwin
+-odemo_gtwin
+# Sources are UTF-8: pass -utf-8 to MSVC only (32- and 64-bit), not to BCC
+-cflag=-utf-8{msvc|msvc64}
+hbct.hbc
+demo_gtwin.prg
+..\src\tget.prg
+..\src\gtwin_tw.c

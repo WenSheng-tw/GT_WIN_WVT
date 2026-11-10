@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>get-tw User Guide</title>
+<style>
+body{max-width:800px;margin:24px auto;padding:0 16px;font-family:"Segoe UI",Arial,sans-serif;line-height:1.65;color:#222}
+h1{font-size:1.5em;border-bottom:2px solid #446;padding-bottom:6px}
+h2{font-size:1.2em;margin-top:2em;border-left:5px solid #446;padding-left:8px}
+table{border-collapse:collapse;width:100%;font-size:.93em;margin:8px 0}
+th,td{border:1px solid #bbb;padding:4px 6px;vertical-align:top;text-align:left}
+th{background:#eef}
+code{background:#f2f2f2;padding:0 3px;border-radius:3px}
+pre{background:#1e2533;color:#e8eef8;padding:10px;overflow-x:auto;border-radius:4px;font-size:.88em;line-height:1.5}
+pre code{color:#e8eef8;background:transparent}
+</style>
+</head>
+<body>
+<h1>get-tw User Guide</h1>
+
+<h2>1. What it is</h2>
+<p>get-tw makes Harbour <code>@ … SAY … GET</code> and <code>READ</code> display and edit Traditional Chinese text correctly, in both CP950 (Big5) and UTF-8:</p>
+<ul>
+<li>Each Chinese character occupies two screen cells and is never split in half.</li>
+<li>The cursor moves over a whole Chinese character; Backspace and Del remove a whole character; insert and overwrite work on whole characters.</li>
+<li>A GET can limit how many characters may be typed, with <code>nMaxChars</code> (section 5).</li>
+<li>Alert dialogs are laid out by Chinese display width.</li>
+</ul>
+<p>It consists of a modified GET class (<code>tget.prg</code>) and two modified terminal drivers (Harbour calls them GTs; they draw text on the screen):</p>
+<ul>
+<li><b>WIN_TW</b> – console version, modified from Harbour's GTWIN.</li>
+<li><b>WVT_TW</b> – GUI window version, modified from Harbour's GTWVT.</li>
+</ul>
+
+<h2>2. Files</h2>
+<table>
+<tr><th>File</th><th>Description</th></tr>
+<tr><td>src\tget.prg</td><td>Modified GET class; replaces Harbour's built-in Get.</td></tr>
+<tr><td>src\gtwin_tw.c</td><td>WIN_TW console terminal driver.</td></tr>
+<tr><td>src\gtwvt_tw.c</td><td>WVT_TW GUI terminal driver.</td></tr>
+<tr><td>src\gtwvt_tw.h</td><td>Header for WVT_TW.</td></tr>
+<tr><td>src\twwide.c</td><td>Shared wide-character cell handling. <b>It is #included by gtwin_tw.c / gtwvt_tw.c. Do not list it in your .hbp and do not compile it on its own</b> (doing so stops with an error message).</td></tr>
+<tr><td>src\twwide.h</td><td>Constants used by twwide.c.</td></tr>
+<tr><td>test\demo_gtwin.*, test\demo_gtwvt.*</td><td>Demo programs (.prg), build files (.hbp) and launch scripts (.bat).</td></tr>
+<tr><td>bin\win32-bcc\, bin\win32-msvc\, bin\win64-msvc\</td><td>Prebuilt demo exes (one set each for BCC 32-bit, MSVC 32-bit and MSVC 64-bit), each with the same four launch scripts.</td></tr>
+<tr><td>LICENSE.txt</td><td>Harbour license (unchanged copy).</td></tr>
+<tr><td>MANIFEST.txt</td><td>File list with checksums.</td></tr>
+<tr><td>get-tw_user_guide_en.html</td><td>This guide.</td></tr>
+</table>
+
+<h2>3. Building and linking</h2>
+<p>Requirements: hbmk2 from Harbour 3.2 (harbour-core) and a Windows C compiler. The included demos were built with 32-bit Embarcadero BCC 7.4; building with MSVC from Visual Studio 2019 (32-bit and 64-bit) has also been tried; other compilers have not been tried.</p>
+<p>Add these to your own .hbp (console version):</p>
+<pre><code>-winuni
+-workdir=work\myprog
+-omyprog
+hbct.hbc            # only if you use CT windows (WOpen etc.)
+myprog.prg
+..\get-tw\src\tget.prg
+..\get-tw\src\gtwin_tw.c</code></pre>
+<p>For the GUI version list <code>gtwvt_tw.c</code> instead and add <code>-gui</code>:</p>
+<pre><code>-winuni
+-gui
+-workdir=work\myprog
+-omyprog
+myprog.prg
+..\get-tw\src\tget.prg
+..\get-tw\src\gtwvt_tw.c</code></pre>
+<p>Build command: run hbmk2 in the folder of the .hbp, with one of the three compilers below.</p>
+<h3>BCC 32-bit</h3>
+<p>Embarcadero BCC 7.4 (32-bit) must be on the PATH; use hbmk2 from the BCC build of Harbour (Harbour's <code>bin\win\bcc\</code>):</p>
+<pre><code>hbmk2 -comp=bcc -plat=win myprog.hbp</code></pre>
+<h3>MSVC 32-bit</h3>
+<p>First run Visual Studio's <code>vcvars32.bat</code> in the same command prompt (or open the "x86 Native Tools Command Prompt"), then use hbmk2 from the MSVC build of Harbour (Harbour's <code>bin\win\msvc\</code>):</p>
+<pre><code>call "&lt;Visual Studio install folder&gt;\VC\Auxiliary\Build\vcvars32.bat"
+hbmk2 -comp=msvc -plat=win myprog.hbp</code></pre>
+<h3>MSVC 64-bit</h3>
+<p>First run <code>vcvars64.bat</code> (or open the "x64 Native Tools Command Prompt"), then use hbmk2 from the 64-bit MSVC build of Harbour (Harbour's <code>bin\win\msvc64\</code>):</p>
+<pre><code>call "&lt;Visual Studio install folder&gt;\VC\Auxiliary\Build\vcvars64.bat"
+hbmk2 -comp=msvc64 -plat=win myprog.hbp</code></pre>
+<p>Executables built with MSVC need no extra DLL to be installed or shipped: the C runtime is linked statically, and only the system DLLs that come with Windows are used.</p>
+<ul>
+<li>Put <code>-comp=… -plat=win</code> on the command line rather than only in the .hbp, and use the Harbour build that matches the compiler (<code>bin\win\bcc\</code>, <code>bin\win\msvc\</code>, <code>bin\win\msvc64\</code>).</li>
+<li>The get-tw sources are UTF-8. With MSVC, add <code>-cflag=-utf-8{msvc|msvc64}</code> to the .hbp (both demo .hbp files do); <code>{msvc}</code> alone does not apply to <code>-comp=msvc64</code>. Do not pass it to BCC.</li>
+<li>If one .hbp is used with several compilers, <code>-workdir</code> can be written as <code>work\${hb_comp}\myprog</code> so that each compiler keeps its intermediate files apart (the demo .hbp files do this).</li>
+<li><b>Create the <code>-workdir</code> folder yourself first.</b> Some hbmk2 versions do not create it and stop with an error.</li>
+<li>Do not list <code>twwide.c</code>.</li>
+<li><b>Do not use hbmk2's <code>-gt</code> option</b> for these drivers (e.g. <code>-gtwin_tw</code>). hbmk2 would also try to link a library called gtwin_tw; get-tw is compiled from source and provides no such library, so linking fails. Use the REQUEST line from section 4 instead.</li>
+<li>Rebuilding the demos writes the exes to test\ (the Release zip has no exes in test\; the prebuilt demo exes are under bin\).</li>
+</ul>
+<p>To build the demos: in the test\ folder create <code>work\bcc\demo_gtwin</code> and <code>work\bcc\demo_gtwvt</code> first, then run (all paths in the .hbp files are relative to test\). The example uses BCC; for MSVC, call vcvars first and replace <code>bcc</code> with <code>msvc</code> or <code>msvc64</code>, and the intermediate files go to <code>work\msvc\</code> or <code>work\msvc64\</code>:</p>
+<pre><code>cd test
+mkdir work\bcc\demo_gtwin work\bcc\demo_gtwvt
+hbmk2 -comp=bcc -plat=win demo_gtwin.hbp
+hbmk2 -comp=bcc -plat=win demo_gtwvt.hbp</code></pre>
+<ul>
+<li>demo_gtwvt.hbp for the GUI version already contains <code>-gui</code>.</li>
+</ul>
+
+<h2>4. Adding the REQUEST to your program</h2>
+<p>Put one of these lines at <b>module level</b> (outside any FUNCTION / PROCEDURE) in one of your .prg files, so the program starts with this driver:</p>
+<pre><code>REQUEST HB_GT_WIN_TW_DEFAULT     // console
+// or
+REQUEST HB_GT_WVT_TW_DEFAULT     // GUI window</code></pre>
+<p>For CP950 also add <code>REQUEST HB_CODEPAGE_CP950</code> (UTF-8 is built in) and select the codepage at startup. The demos do this:</p>
+<pre><code>hb_cdpSelect( "CP950" )            // or "UTF8"
+hb_cdpIsCharIdx( "CP950", .T. )    // character indexing on (the demos turn it on for both codepages)</code></pre>
+<p>The demos have only been exercised with character indexing on, and we suggest you do the same; see section 8 for the off case.</p>
+<p>Other notes:</p>
+<ul>
+<li>Driver names are not case-sensitive. To choose a driver on the command line write <code>//GTWIN_TW</code> or <code>//GTWVT_TW</code> (<code>//GT:WIN_TW</code> also works). The environment variable <code>HB_GT=WIN_TW</code> works too.</li>
+<li><code>hb_gtVersion()</code> returns the name of the active driver, "WIN_TW" or "WVT_TW", so you can check which one your program is really using; the <code>GT=</code> value on the demo's top line shows it.</li>
+<li>The old driver names that began with TW and the old REQUEST lines no longer exist; programs that used them must be changed to the names above.</li>
+<li>The GUI version needs a font that can show Traditional Chinese. The GUI demo sets MingLiU:
+<pre><code>hb_gtInfo( HB_GTI_FONTNAME, "MingLiU" )   // needs #include "hbgtinfo.ch"</code></pre></li>
+</ul>
+
+<h2>5. nMaxChars: limiting how many characters can be typed</h2>
+<p><code>nMaxChars</code> is a property of the Get object; the default is NIL (no limit). <b>There is no @…GET clause for it</b>; set it on the Get object in GetList after the GET has been created.</p>
+<h3>Unit</h3>
+<ul>
+<li>UTF-8: counts <b>characters</b> (one Chinese character = 1).</li>
+<li>CP950: counts <b>bytes</b> (one Chinese character = 2, a letter or digit = 1).</li>
+<li>NIL, 0, a negative number or a non-numeric value: no limit (original behavior). Decimals are truncated to an integer.</li>
+</ul>
+<h3>Effective limit and scope</h3>
+<ul>
+<li>When the field receives focus, the effective limit is the smaller of nMaxChars and the field width (field width is also characters in UTF-8, bytes in CP950).</li>
+<li>Applies only to <b>character</b> fields whose PICTURE mask uses only <code>! A N X 9 #</code> (e.g. <code>Replicate( "X", 10 )</code>, <code>"@!"</code>). Fields whose mask contains other literal characters are not limited.</li>
+<li>Once the limit is reached no more can be typed; the cursor stops at the limit.</li>
+<li>If the content was edited, it is cut to the limit on whole characters (never half a Chinese character) before being written back, then padded with spaces to the field width. Values written by the program without editing are not cut.</li>
+<li>If the initial value is already over the limit it is not cut in advance; the user can Backspace it down.</li>
+<li>nMaxChars itself is kept; the limit is recalculated each time the field gets focus.</li>
+</ul>
+<h3>One field</h3>
+<p>As in the demo: a new GET is the last element of GetList, so use <code>ATail( GetList )</code>:</p>
+<pre><code>LOCAL cMax := Space( 10 )
+@ 6, 2 SAY "Note" GET cMax PICTURE Replicate( "X", 10 )
+ATail( GetList ):nMaxChars := 6
+READ</code></pre>
+<h3>Several fields: set them in a loop</h3>
+<p>Create all GETs as usual, then before READ loop over GetList and set nMaxChars on each Get object:</p>
+<pre><code>LOCAL cName := Space( 10 )
+LOCAL cAddr := Space( 20 )
+LOCAL cCode := Space( 8 )
+LOCAL aMax  := { 4, 10, NIL }       // in GET order; NIL = no limit
+LOCAL i
+
+@ 4, 2 SAY "Name"    GET cName PICTURE Replicate( "X", 10 )
+@ 6, 2 SAY "Address" GET cAddr PICTURE Replicate( "X", 20 )
+@ 8, 2 SAY "Code"    GET cCode PICTURE "@!"
+
+FOR i := 1 TO Len( GetList )
+   GetList[ i ]:nMaxChars := aMax[ i ]
+NEXT
+READ</code></pre>
+<p>GetList is in the order the @…GET lines were written. Use NIL in aMax for GETs that should not be limited.</p>
+
+<h2>6. Running the demos</h2>
+<p>The bin\ folder of the Release zip contains three prebuilt sets: <code>bin\win32-bcc\</code> (BCC 32-bit), <code>bin\win32-msvc\</code> (MSVC 32-bit) and <code>bin\win64-msvc\</code> (MSVC 64-bit, needs 64-bit Windows). Each folder has the two exes and the same four .bat files; double-click one. Each changes to its own folder and runs the exe in that folder with the given codepage:</p>
+<table>
+<tr><th>Script</th><th>Driver</th><th>Codepage</th></tr>
+<tr><td>demo_gtwin_utf8.bat</td><td>console WIN_TW</td><td>UTF-8</td></tr>
+<tr><td>demo_gtwin_cp950.bat</td><td>console WIN_TW</td><td>CP950 (Big5)</td></tr>
+<tr><td>demo_gtwvt_utf8.bat</td><td>GUI WVT_TW</td><td>UTF-8</td></tr>
+<tr><td>demo_gtwvt_cp950.bat</td><td>GUI WVT_TW</td><td>CP950 (Big5)</td></tr>
+</table>
+<ul>
+<li>The first screen line shows <code>GT=</code> with the active driver name (WIN_TW or WVT_TW), the codepage and the CONFIRM setting.</li>
+<li>The form has a field with a Chinese label, a field limited to 6 (nMaxChars = 6), a letters-and-digits field, a date and a number; then SaveScreen / RestScreen, and finally a GET inside a CT window.</li>
+<li>CONFIRM is OFF by default; to try ON, change the last argument in the .bat from OFF to ON.</li>
+<li>Type Chinese with your normal input method.</li>
+<li>You can also run the exe yourself: <code>demo_gtwin.exe &lt;CP950|UTF8&gt; &lt;ON|OFF&gt;</code>. A third argument AUTO is an automatic key self-test and is not needed normally.</li>
+</ul>
+
+<h2>7. Known limitations</h2>
+<ul>
+<li><b>Cannot be used with the original GTWIN / GTWVT.</b> The wide-character handling lives inside WIN_TW / WVT_TW, and the modified GET depends on it. If your program does not REQUEST one of these drivers, or the command line / environment switches to the original GTWIN or GTWVT, none of this handling is present and Chinese text will be shown or edited incorrectly (half characters, leftover characters, misalignment). Always add the REQUEST from section 4.</li>
+<li><b>DispBox filled with a Chinese character</b> is not supported and does not display correctly.</li>
+<li><b>TBrowse truncates by bytes</b>: column width is counted in bytes, so Chinese text can be cut short or in the middle of a character. AChoice, MemoEdit and similar may behave the same way (not tested one by one).</li>
+<li><b>UTF-8 characters at code point 0x20000 and above</b> (mostly rare characters) cannot be displayed, because each screen cell stores only 16 bits.</li>
+<li><b>Hot keys cut early</b>: after a field has been edited, pressing any hot key (SetKey) cuts the content to the limit straight away, without waiting for the field to be left. This is how Harbour's READ works.</li>
+<li><b>Alert inside a CT window</b> uses hbct's own code, which still measures by character count, not Chinese width.</li>
+</ul>
+
+<h2>8. Not yet verified</h2>
+<p>The following have <b>not</b> been checked on the current version; please take care:</p>
+<ul>
+<li>How a GET field looks when it is redrawn after other output has covered it.</li>
+<li>CP950 with character indexing off: a field with a length limit, edited and then cut by End, Del or a function (hot) key — whether the Chinese text is still complete after the redraw. Several other behavior differences with character indexing off have not been examined case by case.</li>
+<li>Writing Chinese with QOut, ? and QQOut (including wrapping at the last column), and drawing Chinese with Replicate.</li>
+<li>SaveScreen / RestScreen of a full screen or a region containing Chinese (including region edges that cut through a character): whether the text is complete after restoring and a half character at the edge becomes blank.</li>
+<li>GUI version with the MingLiU font: whether single- and double-line box borders are continuous (including after minimize and restore).</li>
+<li>One program linked with both drivers and switching between them at run time.</li>
+<li>With a CT window on top, whether screen output still recognizes the two halves of a Chinese character correctly.</li>
+<li>GUI version: selecting a region with Chinese by mouse drag and copying it — whether the clipboard text is free of duplicated characters.</li>
+<li>Alert when not full screen, and Alert inside a CT window.</li>
+<li>READ wrapped in DispBegin, color-only redraws, flicker.</li>
+<li>The actual screen when switching back to the original GTWIN / GTWVT.</li>
+<li>Compilers other than BCC 7.4 (MSVC 32-bit and 64-bit have only been tried for building and the start screen).</li>
+</ul>
+<p>Chinese input method (IME) input: tested personally by the project owner and worked normally.</p>
+
+<h2>9. License</h2>
+<p>tget.prg, gtwin_tw.c, gtwvt_tw.c and gtwvt_tw.h are modified versions of Harbour source files; twwide.c / twwide.h are compiled into gtwin_tw.c / gtwvt_tw.c. They are distributed under the original Harbour license (GNU GPL version 2 or later, with the Harbour exception); see LICENSE.txt and the notices at the top of each source file. The linking exception has been widened to also cover get-tw's own code: you may link get-tw into your own executable without publishing your own source code. get-tw itself, including modified versions, remains under the GNU GPL, and its source must be made available when distributed.</p>
+</body>
+</html>

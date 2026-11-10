@@ -1,0 +1,21 @@
+# get-tw .gitignore
+# Build output and linker by-products (the prebuilt demo exes ship only in the GitHub Release zip)
+*.exe
+*.obj
+*.o
+*.map
+*.tds
+*.il?
+*.lib
+*.a
+*.res
+nul.map
+# hbmk2 work folders
+work/
+# Logs
+*.log
+# Zip-only file list (MANIFEST.txt lists the Release zip contents, see README)
+MANIFEST.txt
+# Packaging leftovers
+*.part
+*.zip
