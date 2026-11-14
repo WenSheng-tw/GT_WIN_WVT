@@ -1,3 +1,7 @@
+// twwide.c copyright and license notice
+// Copyright:   Copyright 2026 Wen Sheng
+// License:     GNU GPL version 2 or later, with the Harbour exception; the license text follows (original English, not translated)
+//
 /*
  * get-tw wide-character cell handling for WIN_TW / WVT_TW
  * Copyright 2026 Wen Sheng
@@ -21,7 +25,9 @@
  * additional uses of the text contained in this release of get-tw.
  *
  * The exception is that, if you link the Harbour libraries or the get-tw
- * code (twwide.c, twwide.h, gtwin_tw.c, gtwvt_tw.c, gtwvt_tw.h, tget.prg)
+ * code (twwide.c, twwide.h, gtwin_tw.c, gtwvt_tw.c, gtwvt_tw.h, tget.prg,
+ * twdisp.prg, achoice.prg, tbrowse.prg, teditor.prg, mlcfunc.c, twambig.c,
+ * twambig.h)
  * with other files to produce an executable, this does not by itself cause
  * the resulting executable to be covered by the GNU General Public License.
  * Your use of that executable is in no way restricted on account of
@@ -44,45 +50,36 @@
  *
  */
 
-// twwide.c: wide-character cell handling, included by gtwin_tw.c / gtwvt_tw.c via #include
-// After inclusion each GT has its own copy of the static functions and state (the super function table is each file's HB_GTSUPER)
+// twwide.c: wide-character cell handling (release version), included by gtwin_tw.c / gtwvt_tw.c via #include
+// After inclusion each GT has its own copy of the static functions and state (D4: the super function table is each file's own HB_GTSUPER)
 // Contents: tw_CharCells, cell kinds, PutChar (automatic trail fill, clearing orphan halves), PutText/PutTextW,
 //       WriteAtW, WriteCon/WriteConW (wrapping by cell width), Scroll/Rest (clearing orphan halves at the edges)
-// Must not be compiled on its own (do not list this file in an .hbp)
+// Per sections 8-10 of the SAY spec; must not be compiled on its own (do not list this file in an .hbp)
 
 #ifndef HB_GTSUPER
-#error "twwide.c can only be included from gtwin_tw.c / gtwvt_tw.c"   // prevent standalone compilation
+#error "twwide.c 只能由 gtwin_tw.c／gtwvt_tw.c 併入"   // prevent standalone compilation
 #endif
 
 #include "twwide.h"
+#include "twambig.h"  /* Modified by Wen Sheng, 2026-11-13: D9-C shared width table tw_CodePointCells / tw_AmbigW */
 
 // RestScreen in progress: flags are restored as-is, no automatic trail fill (one per GT)
 static HB_BOOL s_twInRest = HB_FALSE;
 
-// Cells per character: UTF8 by Unicode range, CP950 by whether it encodes to 2 bytes
-static int tw_CharCells( PHB_GT pGT, HB_USHORT usChar )
+// Cells per character: UTF8 uses the shared table tw_CodePointCells, CP950 counts 2 cells when the character encodes to 2 bytes
+// Modified by Wen Sheng, 2026-11-13: D9-C parameter changed to HB_U32 so HB_USHORT does not cut off 0x20000; UTF-8 now uses the shared table (includes the ambiguous width, PUA fixed at 2, adds Ext-B). Screen cells are still 16-bit (known limitation: Ext-B cannot be displayed).
+static int tw_CharCells( PHB_GT pGT, HB_U32 nCode )
 {
    // ASCII is always 1 cell
-   if( usChar < 0x80 )
+   if( nCode < 0x80 )
       return 1;
    else
    {
       PHB_CODEPAGE cdp = HB_GTSELF_HOSTCP( pGT );   // host codepage
-      // UTF8: same wide ranges as tget TwCells
       if( hb_cdpIsUTF8( cdp ) )
-      {
-         if( ( usChar >= 0x1100 && usChar <= 0x115F ) ||
-             ( usChar >= 0x2E80 && usChar <= 0xA4CF ) ||
-             ( usChar >= 0xAC00 && usChar <= 0xD7A3 ) ||
-             ( usChar >= 0xF900 && usChar <= 0xFAFF ) ||
-             ( usChar >= 0xFE30 && usChar <= 0xFE4F ) ||
-             ( usChar >= 0xFF00 && usChar <= 0xFF60 ) ||
-             ( usChar >= 0xFFE0 && usChar <= 0xFFE6 ) )
-            return 2;
-         return 1;
-      }
+         return tw_CodePointCells( nCode );
       // CP950 and other multibyte codepages: 2 cells when it encodes to 2 bytes
-      return HB_CDPCHAR_LEN( cdp, ( HB_WCHAR ) usChar ) == 2 ? 2 : 1;
+      return HB_CDPCHAR_LEN( cdp, ( HB_WCHAR ) nCode ) == 2 ? 2 : 1;
    }
 }
 
@@ -200,7 +197,7 @@ static HB_BOOL tw_PutChar( PHB_GT pGT, int iRow, int iCol, int iColor, HB_BYTE b
 // Write one character (shared): wide characters advance 2 cells; returns false when it cannot be written on screen
 static HB_BOOL tw_PutOne( PHB_GT pGT, int iRow, int * piCol, int iColor, HB_WCHAR wc, HB_BOOL * pfStop )
 {
-   int n = tw_CharCells( pGT, ( HB_USHORT ) wc );         // cells for this character
+   int n = tw_CharCells( pGT, ( HB_U32 ) wc );         // cells for this character
 
    // Wide lead in the last column: pad with a blank and stop, the cursor becomes MaxCol+1
    if( n == 2 && *piCol == HB_GTSELF_MAXCOL( pGT ) )
@@ -236,7 +233,7 @@ static int tw_PutText( PHB_GT pGT, int iRow, int iCol, int iColor, const char * 
       {
          // Off screen: only accumulate columns, as the core does
          while( HB_CDPCHAR_GET( cdp, szText, nLen, &nIndex, &wc ) )
-            iCol += tw_CharCells( pGT, ( HB_USHORT ) wc );
+            iCol += tw_CharCells( pGT, ( HB_U32 ) wc );
          break;
       }
    }
@@ -256,7 +253,7 @@ static int tw_PutTextW( PHB_GT pGT, int iRow, int iCol, int iColor, const HB_WCH
       {
          // Off screen: only accumulate columns
          while( ++n < nLen )
-            iCol += tw_CharCells( pGT, ( HB_USHORT ) szText[ n ] );
+            iCol += tw_CharCells( pGT, ( HB_U32 ) szText[ n ] );
          break;
       }
    }
@@ -382,7 +379,7 @@ static void tw_WriteConW( PHB_GT pGT, const HB_WCHAR * szText, HB_SIZE nLength )
             fDisp = HB_TRUE;
             break;
          default:
-            n = tw_CharCells( pGT, ( HB_USHORT ) wc );     // cells for this character
+            n = tw_CharCells( pGT, ( HB_U32 ) wc );     // cells for this character
             // Wide character with only 1 cell left: pad the last column with a blank and wrap
             if( n == 2 && iCol == iMaxCol )
             {
@@ -504,7 +501,7 @@ static HB_SIZE tw_StrCells( PHB_GT pGT, const HB_WCHAR * szText, HB_SIZE nLen )
 
    // Sum cells per character
    for( n = 0; n < nLen; ++n )
-      nCells += ( HB_SIZE ) tw_CharCells( pGT, ( HB_USHORT ) szText[ n ] );
+      nCells += ( HB_SIZE ) tw_CharCells( pGT, ( HB_U32 ) szText[ n ] );
    return nCells;
 }
 
@@ -516,7 +513,7 @@ static HB_SIZE tw_FitChars( PHB_GT pGT, const HB_WCHAR * szText, HB_SIZE nLen, H
    // Sum per character, stop when it does not fit (never split a Chinese character)
    for( n = 0; n < nLen; ++n )
    {
-      int iC = tw_CharCells( pGT, ( HB_USHORT ) szText[ n ] );   // cells for this character
+      int iC = tw_CharCells( pGT, ( HB_U32 ) szText[ n ] );   // cells for this character
       if( nCells + iC > nMax )
          break;
       nCells += iC;
@@ -632,7 +629,7 @@ static int tw_Alert( PHB_GT pGT, PHB_ITEM pMessage, PHB_ITEM pOptions,
                }
                szMsgDsp[ ulDst++ ] = szMessageW[ ulMsg ];
                // Sum by cells (Chinese = 2 cells)
-               ulCurrWidth += ( HB_UINT ) tw_CharCells( pGT, ( HB_USHORT ) szMessageW[ ulMsg ] );
+               ulCurrWidth += ( HB_UINT ) tw_CharCells( pGT, ( HB_U32 ) szMessageW[ ulMsg ] );
                if( ulCurrWidth > ulDefWidth && ulSpace1 )
                {
                   // Back up to a blank: subtract the cells of the characters backed over
@@ -663,10 +660,10 @@ static int tw_Alert( PHB_GT pGT, PHB_ITEM pMessage, PHB_ITEM pOptions,
                   }
 #ifndef HB_CLP_STRICT
                   // Hard break: move the whole character to the next line (never split a Chinese character); do not break when it is the only character on the line, to avoid an endless loop
-                  else if( ulCurrWidth > ( HB_UINT ) tw_CharCells( pGT, ( HB_USHORT ) szMessageW[ ulMsg ] ) )
+                  else if( ulCurrWidth > ( HB_UINT ) tw_CharCells( pGT, ( HB_U32 ) szMessageW[ ulMsg ] ) )
                   {
                      // Subtract the cells of this character
-                     ulCurrWidth -= ( HB_UINT ) tw_CharCells( pGT, ( HB_USHORT ) szMessageW[ ulMsg ] );
+                     ulCurrWidth -= ( HB_UINT ) tw_CharCells( pGT, ( HB_U32 ) szMessageW[ ulMsg ] );
                      ulDst--;
                      ulMsg--;
                      szMsgDsp[ ulDst++ ] = '\n';

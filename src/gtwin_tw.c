@@ -70,7 +70,7 @@
 
 /* NOTE: User programs should never call this layer directly! */
 
-// GT name is WIN_TW (the registration name and the HB_GT_WIN_TW / _DEFAULT symbols derive from this)
+// Renamed: the GT name is WIN_TW (the registration name and the HB_GT_WIN_TW / _DEFAULT symbols derive from this)
 #define HB_GT_NAME  WIN_TW
 
 /* TODO: include any standard headers here */

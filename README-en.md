@@ -9,7 +9,7 @@ get-tw makes Harbour `@ … SAY … GET` and `READ` display and edit Traditional
 - A GET can limit how many characters may be entered with `nMaxChars`.
 - Alert dialogs are laid out by Chinese character width.
 
-The package has two parts: a modified GET class (`tget.prg`) and two modified Harbour terminal drivers (GTs):
+The package contains a modified GET class (`tget.prg`), modified AChoice, TBrowse and MemoEdit (`achoice.prg`, `tbrowse.prg`, `teditor.prg`, `mlcfunc.c`; they replace Harbour's built-in versions so that these also lay out text by Chinese width), and two modified Harbour terminal drivers (GTs):
 
 | Terminal | Kind | Based on |
 |---|---|---|
@@ -32,12 +32,19 @@ The source repository does not contain prebuilt exes. The demo exes and `MANIFES
 | `src\gtwvt_tw.h` | Header for `WVT_TW` |
 | `src\twwide.c` | Common wide-character cell handling, `#include`d by `gtwin_tw.c` / `gtwvt_tw.c`; do **not** list it in an .hbp or compile it on its own |
 | `src\twwide.h` | Constants for `twwide.c` |
+| `src\twdisp.prg` | Small helpers shared by AChoice, TBrowse and MemoEdit that work out how many screen cells a piece of text takes |
+| `src\achoice.prg` | Modified AChoice(); list items are padded and cut by display width. Replaces Harbour's built-in AChoice |
+| `src\tbrowse.prg` | Modified TBrowse class; cell text, column widths, headings and footings are measured by display width. Replaces Harbour's built-in TBrowse |
+| `src\teditor.prg` | Modified HBEditor class (the engine behind MemoEdit); display, line wrapping and the cursor column are measured by display width. Replaces Harbour's built-in version |
+| `src\mlcfunc.c` | Modified MemoLine(), MLCount() and related line-wrapping functions; they wrap by display width and no longer change the bytes of Chinese characters. Replaces Harbour's built-in version |
+| `src\twambig.c` | Shared character-width table (1 or 2 cells per character); also provides `TwAmbigW()`. **Do** list it in the .hbp |
+| `src\twambig.h` | Header for `twambig.c`; do not list it in an .hbp |
 | `test\` | Demo programs (.prg), build files (.hbp) and launch scripts (.bat); the prebuilt demo exes are only in the Release zip |
 | `bin\win32-bcc\`, `bin\win32-msvc\`, `bin\win64-msvc\` | Prebuilt demo exes (one set each for BCC 32-bit, MSVC 32-bit and MSVC 64-bit) with the same four batch files; the exes are only in the Release zip |
 | [`get-tw_user_guide_en.html`](get-tw_user_guide_en.html) | User guide (English) |
 | [`get-tw_user_guide_zh.html`](get-tw_user_guide_zh.html) | User guide (Traditional Chinese) |
 | `LICENSE.txt` | Harbour license (unchanged copy) |
-| `MANIFEST.txt` | File list with checksums for the zip package (only in the Release zip) |
+| `MANIFEST.txt` | File list (names and sizes, only in the Release zip) |
 
 ## Building and linking
 
@@ -49,10 +56,17 @@ Add these to your own .hbp (console version):
 -winuni
 -workdir=work\myprog
 -omyprog
+-cflag=-utf-8{msvc|msvc64}
 hbct.hbc
 myprog.prg
 ..\get-tw\src\tget.prg
 ..\get-tw\src\gtwin_tw.c
+..\get-tw\src\twdisp.prg
+..\get-tw\src\achoice.prg
+..\get-tw\src\tbrowse.prg
+..\get-tw\src\teditor.prg
+..\get-tw\src\mlcfunc.c
+..\get-tw\src\twambig.c
 ```
 
 `hbct.hbc` is only needed if you use CT windows (`WOpen` etc.). For the GUI version list `gtwvt_tw.c` instead and add `-gui`:
@@ -62,9 +76,16 @@ myprog.prg
 -gui
 -workdir=work\myprog
 -omyprog
+-cflag=-utf-8{msvc|msvc64}
 myprog.prg
 ..\get-tw\src\tget.prg
 ..\get-tw\src\gtwvt_tw.c
+..\get-tw\src\twdisp.prg
+..\get-tw\src\achoice.prg
+..\get-tw\src\tbrowse.prg
+..\get-tw\src\teditor.prg
+..\get-tw\src\mlcfunc.c
+..\get-tw\src\twambig.c
 ```
 
 Build: run hbmk2 in the folder of the .hbp, with one of the three compilers below.
@@ -103,7 +124,7 @@ Notes:
 - The get-tw sources are UTF-8. With MSVC, add `-cflag=-utf-8{msvc|msvc64}` to the .hbp (both demo .hbp files do); `{msvc}` alone does not apply to `-comp=msvc64`. Do not pass it to BCC.
 - If one .hbp is used with several compilers, `-workdir` can be written as `work\${hb_comp}\myprog` so that each compiler keeps its intermediate files apart (the demo .hbp files do this).
 - Create the `-workdir` folder yourself first; some hbmk2 versions do not create it and stop with an error.
-- Do not list `twwide.c`.
+- Do not list `twwide.c`, `twwide.h` or `twambig.h`; do list `twambig.c`. List all eight get-tw source files from the examples above: without `twambig.c`, linking fails with an unresolved `TWCODEPOINTCELLS`.
 - Always use `-winuni` (both demo .hbp files do); GUI programs also need `-gui`.
 - Do **not** use hbmk2's `-gt` option for these terminals (e.g. `-gtwin_tw`): hbmk2 would also try to link a library of that name, which this package does not provide, so linking fails. Use the REQUEST line below instead.
 
@@ -137,6 +158,8 @@ Other notes:
 #include "hbgtinfo.ch"
 hb_gtInfo( HB_GTI_FONTNAME, "MingLiU" )
 ```
+
+- Programs that consist mainly of Western-European text should call `TwAmbigW(1)` or set the `GETTW_AMBIGW` environment variable (for example `GETTW_AMBIGW=1`), so that ambiguous-width characters are counted as 1 cell. The default is 2 cells, which suits Chinese layout.
 
 ## nMaxChars: limiting the number of characters
 
@@ -204,10 +227,15 @@ All paths in the .hbp files are relative to `test\`; intermediate files go to `t
 
 - Do not use with the original GTWIN / GTWVT (see "Important" above).
 - Using a Chinese character as the DispBox fill character is not supported.
-- TBrowse truncates column text by bytes, so Chinese text can be cut short or in the middle of a character; AChoice, MemoEdit and similar functions may behave alike (not tested one by one).
+- Chinese width in TBrowse, AChoice and MemoEdit: since v1.0.1 these count display width (TBrowse cells, column widths, headings and footings; AChoice items; MemoEdit line wrapping), so Chinese text is no longer cut short or split in the middle of a character. Only a rightmost TBrowse column that is partly visible is still cut by character count, so it may run one cell too far or stop one cell short (not tested).
 - UTF-8 characters at 0x20000 and above (mostly rare characters) cannot be displayed.
 - After editing a field, pressing a hot key (SetKey) cuts the content to the limit immediately, not when leaving the field.
 - Alert inside a CT window uses hbct's own code and is not laid out by Chinese width.
+- If your data contains characters that exist only in BIG5, use hb_cdpSelect("BIG5") or UTF-8 instead of CP950.
+- Characters that the UAO extension maps to the Unicode Private Use Area (PUA) are drawn from whatever the active font and the PC's end-user-defined character (EUDC) file provide, so they may look different or appear blank on different PCs. This is a known limitation.
+- Setting `CODEPAGE=255` at runtime makes the window fall back to the Terminal font.
+- Resizing the window: In the window build (`WVT_TW`), dragging the window to a new size keeps the number of rows and columns, and the text scales with the window. In the console build (`WIN_TW`), resizing the console or Windows Terminal window while a program is running makes Windows rewrap the text on screen and may scroll it, so the program's screen becomes misaligned and the cursor no longer lines up with the text. After that the program only updates the parts that change, so ordinary keys such as the arrow keys do not restore the screen. It can only recover when the program redraws the whole screen; the safest way is to exit the program and run it again. A program that redraws its whole screen when it receives `HB_K_RESIZE` (the notice that the window size has changed) gets its screen and cursor back in line. For this the event mask must include `HB_INKEY_GTEVENT`, for example `Set( _SET_EVENTMASK, hb_bitOr( INKEY_ALL, HB_INKEY_GTEVENT ) )` (needs `#include "inkey.ch"`). MemoEdit, AChoice and TBrowse do not redraw this way by themselves. Do not resize the console window while a program is running.
+- Windows Terminal: When the console build (`WIN_TW`) runs in Windows Terminal 1.24, Windows Terminal draws symbols whose width is ambiguous (for example € ○ ※ × ° and box-drawing characters) one cell wide, while get-tw counts them as two cells for Chinese layout. On a line that contains such symbols, the text after them and the highlight bar are out of place. Ordinary Chinese characters are not affected. In that case, use the classic console window (conhost) or the window build (`WVT_TW`). The ambiguousWidth setting in Windows Terminal 1.25 may help, but it has not been tested.
 
 ## Not yet verified
 
@@ -230,6 +258,6 @@ Chinese input method entry: tried by the author with a normal input method; inpu
 
 ## License
 
-`tget.prg`, `gtwin_tw.c`, `gtwvt_tw.c` and `gtwvt_tw.h` are modified versions of Harbour source files; `twwide.c` / `twwide.h` are compiled into `gtwin_tw.c` / `gtwvt_tw.c`. They are distributed under the original Harbour license (GNU GPL version 2 or later, with the Harbour exception); see [LICENSE.txt](LICENSE.txt) and the notices at the top of each source file.
+`tget.prg`, `gtwin_tw.c`, `gtwvt_tw.c`, `gtwvt_tw.h`, `achoice.prg`, `tbrowse.prg`, `teditor.prg` and `mlcfunc.c` are modified versions of Harbour source files (the original `achoice.prg` was released to the public domain by its author); `twwide.c` / `twwide.h` are compiled into `gtwin_tw.c` / `gtwvt_tw.c`; `twambig.c` / `twambig.h` and `twdisp.prg` were written for get-tw. They are distributed under the original Harbour license (GNU GPL version 2 or later, with the Harbour exception); see [LICENSE.txt](LICENSE.txt) and the notices at the top of each source file.
 
-The get-tw modifications and `twwide.c` / `twwide.h` are Copyright 2026 Wen Sheng and are licensed under the same terms (GNU GPL version 2 or later, with the Harbour exception). Each of the four modified source files starts with a modification notice (who, when, what), followed by the unchanged Harbour copyright and license notice. The linking exception has been widened to also cover get-tw's own code: you may link get-tw into your own executable without publishing your own source code. get-tw itself, including modified versions, remains under the GNU GPL, and its source must be made available when distributed.
+The get-tw modifications and `twwide.c` / `twwide.h`, `twambig.c` / `twambig.h` and `twdisp.prg` are Copyright 2026 Wen Sheng and are licensed under the same terms (GNU GPL version 2 or later, with the Harbour exception). Each of the eight modified source files starts with a modification notice (who, when, what), followed by the unchanged Harbour copyright and license notice. The linking exception has been widened to also cover get-tw's own code: you may link get-tw into your own executable without publishing your own source code. get-tw itself, including modified versions, remains under the GNU GPL, and its source must be made available when distributed.

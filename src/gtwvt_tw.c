@@ -1,8 +1,12 @@
 // get-tw modification notice (GNU GPL version 2, section 2(a))
 // Modified by: Wen Sheng
-// Date:        2026-11-10
+// Date:        2026-11-13
 // Changes:     Traditional Chinese wide-character display support (each Chinese
-//              character uses two cells and is never split); GT renamed to WVT_TW
+//              character uses two cells and is never split); GT renamed to WVT_TW; default
+//              charset changed to CHINESEBIG5_CHARSET(136) (fix D7, 2026-11-13 Wen Sheng);
+//              hFontBox / boxCodePage remain OEM
+//              Modified by Wen Sheng, 2026-11-13: D7 default font MingLiU_HKSCS; charset stays 136;
+//              DRAWBOX stays on; size stays 20x10
 // Copyright:   Copyright 2026 Wen Sheng (modifications)
 // The original Harbour copyright and license notice below is kept unchanged. The linking exception has been widened to also cover get-tw's own code (see the notice in twwide.c): you may link get-tw into your own executable without publishing your own source code. get-tw itself, including modified versions, remains under the GNU GPL, and its source must be made available when distributed.
 
@@ -73,7 +77,7 @@
  *
  */
 
-// Use the renamed header and add the wide-character cell handling
+// Step 0: use the renamed header and add the wide-character cell handling
 #include "gtwvt_tw.h"
 #include "twwide.h"
 
@@ -363,7 +367,10 @@ static PHB_GTWVT hb_gt_wvt_New( PHB_GT pGT, HINSTANCE hInstance, int iCmdShow )
    pWVT->keyLastPos        = 0;
 
    pWVT->CentreWindow      = HB_TRUE;         /* Default is to always display window in centre of screen */
-   pWVT->CodePage          = OEM_CHARSET;     /* GetACP(); - set code page to default system */
+   /* Modified by Wen Sheng, 2026-11-13: D7 settled on a single default font, MingLiU_HKSCS; this line keeps the charset CHINESEBIG5_CHARSET(136).
+    * Measured on test machine: the English or the Chinese face name with 136 both give the MingLiU_HKSCS face (tmH=20, ave=10). With OEM(255), GDI ignores the face name and falls back to Terminal (tmH=18, max=10).
+    * Linked with L1530 lfCharSet=(BYTE)iCodePage and L3948-3987 HB_GTI_CODEPAGE: if CodePage is set to 255 at run time, GetFont falls back to Terminal the same way. hFontBox still uses OEM; this line is unchanged. */
+   pWVT->CodePage          = CHINESEBIG5_CHARSET;  /* was OEM_CHARSET */
 #if ! defined( UNICODE )
    pWVT->boxCodePage       = OEM_CHARSET;     /* GetACP(); - set code page to default system */
 #else
@@ -1527,7 +1534,7 @@ static HFONT hb_gt_wvt_GetFont( LPCTSTR lpFace, int iHeight, int iWidth, int iWe
       logfont.lfItalic         = 0;
       logfont.lfUnderline      = 0;
       logfont.lfStrikeOut      = 0;
-      logfont.lfCharSet        = ( BYTE ) iCodePage;      /* OEM_CHARSET */
+      logfont.lfCharSet        = ( BYTE ) iCodePage;      /* Modified by Wen Sheng, 2026-11-13: pairs with the default 136 at L366 for MingLiU_HKSCS; do not pass 255, or it falls back to Terminal */
       logfont.lfOutPrecision   = 0;
       logfont.lfClipPrecision  = 0;
       logfont.lfQuality        = ( BYTE ) iQuality;       /* DEFAULT_QUALITY, DRAFT_QUALITY or PROOF_QUALITY */
@@ -3452,7 +3459,7 @@ static void hb_gt_wvt_Init( PHB_GT pGT, HB_FHANDLE hFilenoStdin, HB_FHANDLE hFil
       /* SUPER GT initialization */
       HB_GTSUPER_INIT( pGT, hFilenoStdin, hFilenoStdout, hFilenoStderr );
       HB_GTSELF_SETFLAG( pGT, HB_GTI_COMPATBUFFER, 0 );   // Force COMPATBUFFER off
-      pWVT->fontAttribute |= HB_GTI_FONTA_DRAWBOX;        // Box lines are drawn by the built-in bitmap renderer
+      pWVT->fontAttribute |= HB_GTI_FONTA_DRAWBOX;        // Modified by Wen Sheng, 2026-11-13: after D7 was settled, DRAWBOX stays on (D3 self-drawn box lines); all six font3 shots show complete boxes. This line is unchanged.
       HB_GTSELF_RESIZE( pGT, pWVT->ROWS, pWVT->COLS );
       HB_GTSELF_SETFLAG( pGT, HB_GTI_REDRAWMAX, 1 );
       HB_GTSELF_SEMICOLD( pGT );
@@ -3719,6 +3726,7 @@ static HB_BOOL hb_gt_wvt_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
          break;
 
       case HB_GTI_FONTSIZE:
+         /* Modified by Wen Sheng, 2026-11-13: D7 default size stays 20x10; the logic here is unchanged and still creates the font with the current CodePage. */
          pInfo->pResult = hb_itemPutNI( pInfo->pResult, pWVT->PTEXTSIZE.y );
          iVal = hb_itemGetNI( pInfo->pNewVal );
          if( iVal > 0 )
@@ -3946,6 +3954,7 @@ static HB_BOOL hb_gt_wvt_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
          break;
 
       case HB_GTI_CODEPAGE:
+         /* Modified by Wen Sheng, 2026-11-13: hFont is rebuilt here, using the passed iVal as lfCharSet (see L1530). The D7 default font MingLiU_HKSCS needs 136; if 255 is set at run time, GDI falls back to Terminal. The logic is not changed in this round; only the risk is noted. */
          pInfo->pResult = hb_itemPutNI( pInfo->pResult, pWVT->CodePage );
          if( hb_itemType( pInfo->pNewVal ) & HB_IT_NUMERIC )
          {

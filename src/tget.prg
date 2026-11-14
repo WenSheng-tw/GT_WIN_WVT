@@ -1,8 +1,9 @@
 // get-tw modification notice (GNU GPL version 2, section 2(a))
 // Modified by: Wen Sheng
-// Date:        2026-11-10
+// Date:        2026-11-10; 2026-11-13
 // Changes:     Traditional Chinese wide-character editing in GET (cursor moves and
 //              deletes work on whole characters; new nMaxChars character limit)
+//              Modified by Wen Sheng, 2026-11-13: D9-C TwCells now calls the shared TwCodePointCells
 // Copyright:   Copyright 2026 Wen Sheng (modifications)
 // The original Harbour copyright and license notice below is kept unchanged. The linking exception has been widened to also cover get-tw's own code (see the notice in twwide.c): you may link get-tw into your own executable without publishing your own source code. get-tw itself, including modified versions, remains under the GNU GPL, and its source must be made available when distributed.
 
@@ -2053,7 +2054,7 @@ METHOD TwTail( cText, nSkip ) CLASS Get
 
    RETURN SubStr( cText, nPos )
 
-// CJK width: sum screen cells per character; CP950 uses the byte length of each character, UTF8 East Asian wide characters count 2 cells, others 1
+// CJK width: sum screen cells per character; CP950 takes the byte count of each character, UTF8 now calls TwCodePointCells
 METHOD TwCells( cText ) CLASS Get
 
    LOCAL nCells := 0
@@ -2064,15 +2065,8 @@ METHOD TwCells( cText ) CLASS Get
    FOR nFor := 1 TO Len( cText )
       IF lUTF8
          nCode := hb_UTF8Asc( SubStr( cText, nFor, 1 ) )
-         // Wide ranges: Hangul Jamo, CJK Radicals through Yi, Hangul Syllables, CJK Compatibility Ideographs, Vertical Forms, Fullwidth Forms, supplementary ideographs
-         IF ( nCode >= 0x1100 .AND. nCode <= 0x115F ) .OR. ( nCode >= 0x2E80 .AND. nCode <= 0xA4CF ) .OR. ;
-            ( nCode >= 0xAC00 .AND. nCode <= 0xD7A3 ) .OR. ( nCode >= 0xF900 .AND. nCode <= 0xFAFF ) .OR. ;
-            ( nCode >= 0xFE30 .AND. nCode <= 0xFE4F ) .OR. ( nCode >= 0xFF00 .AND. nCode <= 0xFF60 ) .OR. ;
-            ( nCode >= 0xFFE0 .AND. nCode <= 0xFFE6 ) .OR. nCode >= 0x20000
-            nCells += 2
-         ELSE
-            nCells += 1
-         ENDIF
+         // Modified by Wen Sheng, 2026-11-13: now calls the shared C function TwCodePointCells (D9-C merges the four tables; includes the ambiguous width, PUA fixed at 2, adds 0x20000)
+         nCells += TwCodePointCells( nCode )
       ELSE
          nCells += hb_BLen( SubStr( cText, nFor, 1 ) )
       ENDIF

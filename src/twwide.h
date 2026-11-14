@@ -1,3 +1,7 @@
+// twwide.h copyright and license notice
+// Copyright:   Copyright 2026 Wen Sheng
+// License:     GNU GPL version 2 or later, with the Harbour exception; the license text follows (original English, not translated)
+//
 /*
  * get-tw wide-character cell constants for WIN_TW / WVT_TW
  * Copyright 2026 Wen Sheng
@@ -21,7 +25,9 @@
  * additional uses of the text contained in this release of get-tw.
  *
  * The exception is that, if you link the Harbour libraries or the get-tw
- * code (twwide.c, twwide.h, gtwin_tw.c, gtwvt_tw.c, gtwvt_tw.h, tget.prg)
+ * code (twwide.c, twwide.h, gtwin_tw.c, gtwvt_tw.c, gtwvt_tw.h, tget.prg,
+ * twdisp.prg, achoice.prg, tbrowse.prg, teditor.prg, mlcfunc.c, twambig.c,
+ * twambig.h)
  * with other files to produce an executable, this does not by itself cause
  * the resulting executable to be covered by the GNU General Public License.
  * Your use of that executable is in no way restricted on account of
@@ -44,7 +50,7 @@
  *
  */
 
-// twwide.h: shared constants for wide-character cell handling
+// twwide.h: shared constants for wide-character cell handling (release version)
 // The lead cell stores the character; the trail cell stores the same character with the TW_ATTR_TRAIL flag set in bAttr
 #ifndef TW_WIDE_H_
 #define TW_WIDE_H_
@@ -58,4 +64,5 @@
 #define TW_CELL_TRAIL   2
 #define TW_CELL_ORPHAN  3
 
+/* Modified by Wen Sheng, 2026-11-13: width queries are now provided by tw_CodePointCells / tw_AmbigW in twambig.h; the constants in this file are unchanged. */
 #endif // TW_WIDE_H_

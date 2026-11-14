@@ -1,8 +1,10 @@
 // get-tw modification notice (GNU GPL version 2, section 2(a))
 // Modified by: Wen Sheng
-// Date:        2026-11-10
+// Date:        2026-11-10; 2026-11-13
 // Changes:     Traditional Chinese wide-character display support (each Chinese
 //              character uses two cells and is never split); GT renamed to WVT_TW
+//              Modified by Wen Sheng, 2026-11-13: D7 default font changed to the single font
+//              MingLiU_HKSCS; size stays 20x10
 // Copyright:   Copyright 2026 Wen Sheng (modifications)
 // The original Harbour copyright and license notice below is kept unchanged. The linking exception has been widened to also cover get-tw's own code (see the notice in twwide.c): you may link get-tw into your own executable without publishing your own source code. get-tw itself, including modified versions, remains under the GNU GPL, and its source must be made available when distributed.
 
@@ -52,7 +54,7 @@
  *
  */
 
-// Renamed include guard
+// Step 0: renamed include guard
 #ifndef HB_GTWVT_TW_H_
 #define HB_GTWVT_TW_H_
 
@@ -87,12 +89,17 @@
 #else
 #  define WVT_DEFAULT_ROWS         25
 #  define WVT_DEFAULT_COLS         80
-#  define WVT_DEFAULT_FONT_HEIGHT  20
+#  define WVT_DEFAULT_FONT_HEIGHT  20  /* Modified by Wen Sheng, 2026-11-13: D7 size stays 20x10; HKSCS measured tmH=20, ave=10, ASCII 10 / CJK 20 */
 #  define WVT_DEFAULT_FONT_WIDTH   10
 #endif
 
 #define WVT_DEFAULT_FONT_ATTR       0
-#define WVT_DEFAULT_FONT_NAME       TEXT( "Courier New" )
+/* Modified by Wen Sheng, 2026-11-13: D7 default font changed to MingLiU_HKSCS (English name).
+ * Measured on test machine: with CreateFontIndirect + GetTextFace, the English name and the Chinese face name at charset=136
+ * give the same actual face and the same metrics (tmH=20, ave=10, max=20; U+4E2D/EUR/U+2460/U+E000=20, U+00B1=10).
+ * The English name is used to avoid the source UTF-8 encoding and LF_FACESIZE risks. The charset still comes from CHINESEBIG5_CHARSET=136 at L366;
+ * with 255 (OEM), GDI ignores the face name and falls back to Terminal. */
+#define WVT_DEFAULT_FONT_NAME       TEXT( "MingLiU_HKSCS" )
 
 #define WVT_EXTKEY_FLAG             ( 1 << 24 )
 

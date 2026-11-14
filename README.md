@@ -9,7 +9,7 @@ get-tw 讓 Harbour 程式的 `@ … SAY … GET`、`READ` 能正確顯示和編�
 - GET 可以用 `nMaxChars` 限制最多輸入幾個字。
 - Alert 對話框依中文寬度排版。
 
-套件由兩部分組成：修改過的 GET 類別（`tget.prg`），以及兩個修改過的畫面層（Harbour 稱為 GT，負責把字畫到螢幕上）：
+套件包括修改過的 GET 類別（`tget.prg`）、修改過的 AChoice、TBrowse、MemoEdit（`achoice.prg`、`tbrowse.prg`、`teditor.prg`、`mlcfunc.c`，取代 Harbour 內建的版本，讓它們也依中文寬度排版），以及兩個修改過的畫面層（Harbour 稱為 GT，負責把字畫到螢幕上）：
 
 | 畫面層 | 種類 | 來源 |
 |---|---|---|
@@ -32,12 +32,19 @@ get-tw 讓 Harbour 程式的 `@ … SAY … GET`、`READ` 能正確顯示和編�
 | `src\gtwvt_tw.h` | `WVT_TW` 用的標頭檔 |
 | `src\twwide.c` | 中文寬字格子的共用處理；已由 `gtwin_tw.c`／`gtwvt_tw.c` 以 `#include` 併入，**不要**另外列進 .hbp，也不要單獨編譯 |
 | `src\twwide.h` | `twwide.c` 用的常數 |
+| `src\twdisp.prg` | AChoice、TBrowse、MemoEdit 共用的小函式，計算一段文字在畫面上占幾格 |
+| `src\achoice.prg` | 修改過的 AChoice()，選項依顯示寬度補空白與截斷；取代 Harbour 內建的 AChoice |
+| `src\tbrowse.prg` | 修改過的 TBrowse 類別，欄位內容、欄寬、標題與註腳依顯示寬度計算；取代 Harbour 內建的 TBrowse |
+| `src\teditor.prg` | 修改過的 HBEditor 類別（MemoEdit 的底層），顯示、斷行與游標欄位依顯示寬度計算；取代 Harbour 內建的版本 |
+| `src\mlcfunc.c` | 修改過的 MemoLine()、MLCount() 等斷行函式，依顯示寬度斷行，也不會改動中文字的位元組；取代 Harbour 內建的版本 |
+| `src\twambig.c` | 共用的字元寬度表（每個字占 1 格或 2 格），也提供 `TwAmbigW()`；**要**列進 .hbp |
+| `src\twambig.h` | `twambig.c` 用的標頭檔；不要列進 .hbp |
 | `test\` | 示範程式（.prg）、建置設定（.hbp）、啟動批次檔（.bat）；編好的示範 exe 只在 Release zip 裡 |
 | `bin\win32-bcc\`、`bin\win32-msvc\`、`bin\win64-msvc\` | 編好的示範 exe（BCC 32 位元、MSVC 32 位元、MSVC 64 位元各一組）與同樣的 4 個批次檔；exe 只在 Release zip 裡 |
 | [`get-tw_user_guide_zh.html`](get-tw_user_guide_zh.html) | 中文使用說明 |
 | [`get-tw_user_guide_en.html`](get-tw_user_guide_en.html) | 英文使用說明 |
 | `LICENSE.txt` | Harbour 授權（原樣） |
-| `MANIFEST.txt` | zip 套件的檔案清單與檢查碼（只在 Release zip 裡） |
+| `MANIFEST.txt` | zip 套件的檔案清單（檔名與大小，只在 Release zip 裡） |
 
 ## 編譯與連結
 
@@ -49,10 +56,17 @@ get-tw 讓 Harbour 程式的 `@ … SAY … GET`、`READ` 能正確顯示和編�
 -winuni
 -workdir=work\myprog
 -omyprog
+-cflag=-utf-8{msvc|msvc64}
 hbct.hbc
 myprog.prg
 ..\get-tw\src\tget.prg
 ..\get-tw\src\gtwin_tw.c
+..\get-tw\src\twdisp.prg
+..\get-tw\src\achoice.prg
+..\get-tw\src\tbrowse.prg
+..\get-tw\src\teditor.prg
+..\get-tw\src\mlcfunc.c
+..\get-tw\src\twambig.c
 ```
 
 `hbct.hbc` 只有用到 CT 視窗（`WOpen` 等）才需要。視窗版改列 `gtwvt_tw.c`，並加上 `-gui`：
@@ -62,9 +76,16 @@ myprog.prg
 -gui
 -workdir=work\myprog
 -omyprog
+-cflag=-utf-8{msvc|msvc64}
 myprog.prg
 ..\get-tw\src\tget.prg
 ..\get-tw\src\gtwvt_tw.c
+..\get-tw\src\twdisp.prg
+..\get-tw\src\achoice.prg
+..\get-tw\src\tbrowse.prg
+..\get-tw\src\teditor.prg
+..\get-tw\src\mlcfunc.c
+..\get-tw\src\twambig.c
 ```
 
 編譯：在 .hbp 所在的資料夾執行，下面三種編譯器擇一。
@@ -103,7 +124,7 @@ hbmk2 -comp=msvc64 -plat=win myprog.hbp
 - get-tw 的原始碼是 UTF-8。用 MSVC 時請在 .hbp 加 `-cflag=-utf-8{msvc|msvc64}`（示範的 .hbp 都有）；只寫 `{msvc}` 不會套用到 `-comp=msvc64`。BCC 不要加。
 - 同一份 .hbp 給多種編譯器用時，`-workdir` 可以寫成 `work\${hb_comp}\myprog`，各編譯器的中間檔就會分開放（示範的 .hbp 就是這樣寫）。
 - 先自己建好 `-workdir` 指定的資料夾；有些版本的 hbmk2 不會自動建立，會報錯停止。
-- `twwide.c` 不要列。
+- `twwide.c`、`twwide.h`、`twambig.h` 不要列；`twambig.c` 要列。上面範例裡的 8 個 get-tw 原始檔要一起列：少了 `twambig.c`，連結時會出現找不到 `TWCODEPOINTCELLS` 的錯誤。
 - 一定要加 `-winuni`（示範的 .hbp 都有）；視窗版另外加 `-gui`。
 - **不要**用 hbmk2 的 `-gt` 參數指定這兩個畫面層（例如 `-gtwin_tw`）：hbmk2 會另外去連結一個同名程式庫，本套件沒有這個程式庫，連結會失敗。請在程式裡寫 REQUEST（見下一節）。
 
@@ -137,6 +158,8 @@ hb_cdpIsCharIdx( "CP950", .T. )    // 開字元索引（示範程式兩種碼頁
 #include "hbgtinfo.ch"
 hb_gtInfo( HB_GTI_FONTNAME, "MingLiU" )
 ```
+
+- 以西歐語文為主的程式，應呼叫 `TwAmbigW(1)`，或設定環境變數 `GETTW_AMBIGW`（例如 `GETTW_AMBIGW=1`），讓寬度會隨語境改變的字元按 1 格計算。預設為 2 格，適合中文排版。
 
 ## nMaxChars：限制最多輸入幾個字
 
@@ -204,10 +227,15 @@ hbmk2 -comp=bcc -plat=win demo_gtwvt.hbp
 
 - 不可搭配原版 GTWIN／GTWVT（見上方「重要」）。
 - DispBox 用中文字當填滿字元：不支援，顯示不正確。
-- TBrowse 依位元組截斷欄寬，含中文時可能被截短或切在字中間；AChoice、MemoEdit 等也可能有類似情形（未逐一測試）。
+- TBrowse、AChoice、MemoEdit 的中文寬度：v1.0.1 起改用顯示寬度計算（TBrowse 的欄位內容、欄寬、標題與註腳，AChoice 的選項，MemoEdit 的斷行），中文不會再被截短或切在字中間。只有最右邊露出一部分的 TBrowse 欄位，仍是依字數截斷，可能超出或少一格（未測試）。
 - UTF-8 字碼 0x20000 以上的字（多為罕用字）顯示不出來。
 - 欄位改過之後按熱鍵（SetKey），內容會先截到上限，不等離開欄位。
 - CT 視窗裡的 Alert 走 hbct 自己的程式，沒有依中文寬度排版。
+- 資料含 BIG5 專有字時，請用 hb_cdpSelect("BIG5") 或 UTF-8，不要用 CP950。
+- 補完計畫（UAO）中對應到 Unicode 私人造字區（PUA）的字，畫面顯示取決於所用字型與各電腦的造字檔（EUDC），不同電腦可能顯示不同字形或空白，屬已知限制。
+- 執行時若設定 `CODEPAGE=255`，視窗會改用 Terminal 字型。
+- 調整視窗大小：視窗版（`WVT_TW`）拖曳改變視窗大小時，畫面的列數與欄數不變，文字會跟著視窗放大或縮小。主控台版（`WIN_TW`）在程式執行中改變主控台或 Windows Terminal 的視窗大小時，Windows 會把畫面上的文字重新折行，並可能捲動畫面，程式畫面會錯位，游標也會和文字對不上。之後程式只更新有變動的部分，所以按方向鍵等一般操作不會讓畫面恢復；只有程式把整個畫面重畫時才可能恢復，最穩妥的做法是結束程式後重新執行。程式若在收到 `HB_K_RESIZE`（視窗大小改變的通知）時把整個畫面重畫，畫面與游標可以恢復；這需要把事件遮罩加上 `HB_INKEY_GTEVENT`，例如 `Set( _SET_EVENTMASK, hb_bitOr( INKEY_ALL, HB_INKEY_GTEVENT ) )`（需 `#include "inkey.ch"`）。MemoEdit、AChoice、TBrowse 本身不會這樣重畫。請不要在程式執行時調整主控台視窗大小。
+- Windows Terminal（WT）：主控台版（`WIN_TW`）在 Windows Terminal 1.24 執行時，Windows Terminal 會把寬度不一定的符號（例如 € ○ ※ × ° 和框線符號）畫成 1 格，get-tw 則依中文排版算成 2 格，所以同一行這類符號後面的文字和反白條會錯位。一般中文字不受影響。遇到這種情形，請改用傳統主控台視窗（conhost）或視窗版（`WVT_TW`）。Windows Terminal 1.25 的 ambiguousWidth 設定可能有幫助，但尚未測試。
 
 ## 尚未驗證
 
@@ -230,6 +258,6 @@ hbmk2 -comp=bcc -plat=win demo_gtwvt.hbp
 
 ## 授權
 
-`tget.prg`、`gtwin_tw.c`、`gtwvt_tw.c`、`gtwvt_tw.h` 是 Harbour 原始檔的修改版；`twwide.c`／`twwide.h` 編進 `gtwin_tw.c`／`gtwvt_tw.c` 裡。依 Harbour 原授權（GNU GPL 第 2 版或更新版，附 Harbour 例外條款）散布，詳見 [LICENSE.txt](LICENSE.txt) 與各原始檔開頭的聲明。
+`tget.prg`、`gtwin_tw.c`、`gtwvt_tw.c`、`gtwvt_tw.h`、`achoice.prg`、`tbrowse.prg`、`teditor.prg`、`mlcfunc.c` 是 Harbour 原始檔的修改版（`achoice.prg` 的原版由原作者釋出為公有領域）；`twwide.c`／`twwide.h` 編進 `gtwin_tw.c`／`gtwvt_tw.c` 裡；`twambig.c`／`twambig.h`、`twdisp.prg` 是 get-tw 自己寫的檔案。依 Harbour 原授權（GNU GPL 第 2 版或更新版，附 Harbour 例外條款）散布，詳見 [LICENSE.txt](LICENSE.txt) 與各原始檔開頭的聲明。
 
-get-tw 的修改部分，以及 `twwide.c`／`twwide.h`：Copyright 2026 Wen Sheng，同樣以 GNU GPL 第 2 版或更新版（附 Harbour 例外條款）授權。四個修改過的原始檔開頭有修改聲明（修改者、日期、修改內容），其後是原樣保留的 Harbour 著作權與授權聲明。上述例外條款的範圍已放寬，也涵蓋 get-tw 本身的程式碼：可以把 get-tw 連結進自己的執行檔，不必公開自己的程式碼；但 get-tw 本身（含修改版）仍依 GNU GPL 授權，散布時必須公開其原始碼。
+get-tw 的修改部分，以及 `twwide.c`／`twwide.h`、`twambig.c`／`twambig.h`、`twdisp.prg`：Copyright 2026 Wen Sheng，同樣以 GNU GPL 第 2 版或更新版（附 Harbour 例外條款）授權。八個修改過的原始檔開頭有修改聲明（修改者、日期、修改內容），其後是原樣保留的 Harbour 著作權與授權聲明。上述例外條款的範圍已放寬，也涵蓋 get-tw 本身的程式碼：可以把 get-tw 連結進自己的執行檔，不必公開自己的程式碼；但 get-tw 本身（含修改版）仍依 GNU GPL 授權，散布時必須公開其原始碼。

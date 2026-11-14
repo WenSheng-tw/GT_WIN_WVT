@@ -10,3 +10,10 @@ hbct.hbc
 demo_gtwin.prg
 ..\src\tget.prg
 ..\src\gtwin_tw.c
+..\src\twdisp.prg
+..\src\achoice.prg
+..\src\tbrowse.prg
+..\src\teditor.prg
+..\src\mlcfunc.c
+# Modified by Wen Sheng, 2026-11-13: D9-C adds the shared width table twambig.c (TwAmbigW / TwCodePointCells)
+..\src\twambig.c
