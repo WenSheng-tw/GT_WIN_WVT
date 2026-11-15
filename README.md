@@ -24,6 +24,14 @@ get-tw 讓 Harbour 程式的 `@ … SAY … GET`、`READ` 能正確顯示和編�
 
 同一支測試程式在主控台（CP950）執行：左邊用 Harbour 原版 GTWIN，中文字與 ○、※、€ 等符號只算 1 格而疊在一起；右邊用 get-tw 的 WIN_TW，每個字都占滿 2 格。
 
+![WIN_TW 的中文 GET](docs/images/win_tw_get.png)
+
+主控台版（WIN_TW）的 GET：欄位裡是中英文混合的「王小明 ABC」，3 個中文字各占 2 格，整個欄位剛好 10 格，不會切出半個字。
+
+![WVT_TW 的中文 GET](docs/images/wvt_tw_get.png)
+
+視窗版（WVT_TW）的同一個 GET 表單：中文字一樣各占 2 格，欄位寬度和主控台版相同。
+
 ![WIN_TW 的 AChoice](docs/images/win_tw_achoice.png)
 
 主控台版（WIN_TW）的 AChoice：中英文混合的選項依顯示寬度對齊，反白列剛好蓋住整列。

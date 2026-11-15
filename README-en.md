@@ -24,6 +24,14 @@ The package contains a modified GET class (`tget.prg`), modified AChoice, TBrows
 
 The same test program in a console window (CP950): with Harbour's original GTWIN (left), Chinese characters and symbols such as ○, ※ and € get only one cell and overlap; with get-tw's WIN_TW (right), each one takes its full two cells.
 
+![Chinese GET in WIN_TW](docs/images/win_tw_get.png)
+
+GET in the console build (WIN_TW): the field holds the mixed text 「王小明 ABC」; each of the three Chinese characters takes two cells, the field is exactly ten cells wide, and no character is cut in half.
+
+![Chinese GET in WVT_TW](docs/images/wvt_tw_get.png)
+
+The same GET form in the window build (WVT_TW): Chinese characters still take two cells each, and the field is as wide as in the console build.
+
 ![AChoice in WIN_TW](docs/images/win_tw_achoice.png)
 
 AChoice in the console build (WIN_TW): items that mix Chinese and English line up by display width, and the highlight bar covers exactly one row.
