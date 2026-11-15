@@ -18,6 +18,24 @@ get-tw 讓 Harbour 程式的 `@ … SAY … GET`、`READ` 能正確顯示和編�
 
 > **重要：** 修改過的 GET 依賴 `WIN_TW`／`WVT_TW` 裡的寬字處理，**不可**搭配 Harbour 原版 GTWIN／GTWVT 使用，否則中文會顯示或編輯錯誤。
 
+## 畫面截圖
+
+![Harbour 原版 GTWIN 與 get-tw WIN_TW 對照](docs/images/compare_harbour_vs_gettw.png)
+
+同一支測試程式在主控台（CP950）執行：左邊用 Harbour 原版 GTWIN，中文字與 ○、※、€ 等符號只算 1 格而疊在一起；右邊用 get-tw 的 WIN_TW，每個字都占滿 2 格。
+
+![WIN_TW 的 AChoice](docs/images/win_tw_achoice.png)
+
+主控台版（WIN_TW）的 AChoice：中英文混合的選項依顯示寬度對齊，反白列剛好蓋住整列。
+
+![WIN_TW 的 MemoEdit](docs/images/win_tw_memoedit.png)
+
+主控台版（WIN_TW）的 MemoEdit：中英文混合的文字依顯示寬度排在編輯區內，底下的狀態列顯示游標所在的行與欄。
+
+![WVT_TW 的 TBrowse](docs/images/wvt_tw_tbrowse.png)
+
+視窗版（WVT_TW）的 TBrowse：欄寬只有 5、6、8 格時，中文依格數截斷、不會切出半個字，各欄的分隔線保持對齊。
+
 ## 下載
 
 原始碼庫不含編好的 exe。示範 exe 與 `MANIFEST.txt` 放在 GitHub Release 的 zip 套件裡：<https://github.com/WenSheng-tw/GT_WIN_WVT/releases>

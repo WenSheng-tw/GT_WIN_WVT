@@ -18,6 +18,24 @@ The package contains a modified GET class (`tget.prg`), modified AChoice, TBrows
 
 > **Important:** the modified GET relies on the wide-character handling inside `WIN_TW` / `WVT_TW`. Do **not** use it with the original Harbour GTWIN or GTWVT; Chinese text will not be displayed or edited correctly.
 
+## Screenshots
+
+![Harbour GTWIN compared with get-tw WIN_TW](docs/images/compare_harbour_vs_gettw.png)
+
+The same test program in a console window (CP950): with Harbour's original GTWIN (left), Chinese characters and symbols such as ○, ※ and € get only one cell and overlap; with get-tw's WIN_TW (right), each one takes its full two cells.
+
+![AChoice in WIN_TW](docs/images/win_tw_achoice.png)
+
+AChoice in the console build (WIN_TW): items that mix Chinese and English line up by display width, and the highlight bar covers exactly one row.
+
+![MemoEdit in WIN_TW](docs/images/win_tw_memoedit.png)
+
+MemoEdit in the console build (WIN_TW): mixed Chinese and English text is laid out by display width inside the edit area, and the status line at the bottom shows the cursor's line and column.
+
+![TBrowse in WVT_TW](docs/images/wvt_tw_tbrowse.png)
+
+TBrowse in the window build (WVT_TW): in columns only 5, 6 or 8 cells wide, Chinese text is cut by cell count without half characters, and the column separators stay aligned.
+
 ## Download
 
 The source repository does not contain prebuilt exes. The demo exes and `MANIFEST.txt` are in the zip package attached to the GitHub Release: <https://github.com/WenSheng-tw/GT_WIN_WVT/releases>
